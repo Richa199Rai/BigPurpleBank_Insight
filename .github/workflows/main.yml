@@ -1,10 +1,46 @@
-- name: Build with dotnet
-  run: |
-    dotnet restore
-    dotnet build --configuration Release
+name: Deploy to Azure Web App
 
-- name: Run tests
-  run: dotnet test --no-build --verbosity normal
+on:
+  push:
+    branches:
+      - main
 
-- name: Publish
-  run: dotnet publish BankingApi/BankingApi.csproj -c Release -o ./publish
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      AZURE_WEBAPP_NAME: bigpurplebank-api
+      AZURE_RESOURCE_GROUP: bigpurplebank-rg
+      AZURE_REGION: australiaeast
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore, Build, and Test
+        working-directory: BankingApi
+        run: |
+          dotnet restore
+          dotnet build --configuration Release
+          dotnet test --no-build --verbosity normal
+
+      - name: Publish
+        run: dotnet publish BankingApi/BankingApi.csproj -c Release -o ./publish
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          slot-name: 'production'
+          package: './publish'
