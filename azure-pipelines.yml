@@ -1,47 +1,51 @@
-name: Deploy to Azure Web App
-
-on:
-  push:
-    branches:
+trigger:
+  branches:
+    include:
       - main
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
+pool:
+  vmImage: 'ubuntu-latest'
 
-    env:
-      AZURE_WEBAPP_NAME: bigpurplebank-api
-      AZURE_RESOURCE_GROUP: bigpurplebank-rg
-      AZURE_REGION: australiaeast
+variables:
+  buildConfiguration: 'Release'
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+steps:
+- task: UseDotNet@2
+  inputs:
+    packageType: 'sdk'
+    version: '8.0.x'
+    installationPath: $(Agent.ToolsDirectory)/dotnet
 
-      - name: Setup .NET Core
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
+- task: DotNetCoreCLI@2
+  displayName: 'Restore packages'
+  inputs:
+    command: 'restore'
+    projects: '**/*.csproj'
 
-      - name: Build with dotnet
-        run: |
-          dotnet restore
-          dotnet build --configuration Release
+- task: DotNetCoreCLI@2
+  displayName: 'Build project'
+  inputs:
+    command: 'build'
+    projects: '**/*.csproj'
+    arguments: '--configuration $(buildConfiguration)'
 
-      - name: Run tests
-        run: dotnet test --no-build --verbosity normal
+- task: DotNetCoreCLI@2
+  displayName: 'Run tests'
+  inputs:
+    command: 'test'
+    projects: '**/*.csproj'
 
-      - name: Publish
-        run: dotnet publish BankingApi/BankingApi.csproj -c Release -o ./publish
+- task: DotNetCoreCLI@2
+  displayName: 'Publish project'
+  inputs:
+    command: 'publish'
+    publishWebProjects: true
+    arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+    zipAfterPublish: true
 
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          slot-name: 'production'
-          package: './publish'
+- task: AzureWebApp@1
+  displayName: 'Deploy to Azure Web App'
+  inputs:
+    azureSubscription: 'AzureConnection'
+    appName: 'bigpurplebank-api'
+    package: '$(Build.ArtifactStagingDirectory)/**/*.zip'
