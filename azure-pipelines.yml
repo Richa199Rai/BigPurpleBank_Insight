@@ -1,96 +1,47 @@
-trigger:
-  - main
+name: Deploy to Azure Web App
 
-pool:
-  vmImage: 'ubuntu-latest'
+on:
+  push:
+    branches:
+      - main
 
-variables:
-  buildConfiguration: 'Release'
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
 
-steps:
-- task: UseDotNet@2
-  displayName: 'Install .NET SDK'
-  inputs:
-    packageType: 'sdk'
-    version: '6.0.x'
+    env:
+      AZURE_WEBAPP_NAME: bigpurplebank-api
+      AZURE_RESOURCE_GROUP: bigpurplebank-rg
+      AZURE_REGION: australiaeast
 
-- task: DotNetCoreCLI@2
-  displayName: 'Restore NuGet packages'
-  inputs:
-    command: 'restore'
-    projects: '**/*.csproj'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-- task: DotNetCoreCLI@2
-  displayName: 'Build solution'
-  inputs:
-    command: 'build'
-    projects: '**/*.csproj'
-    arguments: '--configuration $(buildConfiguration)'
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
 
-- task: DotNetCoreCLI@2
-  displayName: 'Run unit tests'
-  inputs:
-    command: 'test'
-    projects: 'BankingApi.Tests/BankingApi.Tests.csproj'
-    arguments: '--configuration $(buildConfiguration) --collect:"XPlat Code Coverage"'
+      - name: Build with dotnet
+        run: |
+          dotnet restore
+          dotnet build --configuration Release
 
-- task: PublishCodeCoverageResults@1
-  displayName: 'Publish code coverage report'
-  inputs:
-    codeCoverageTool: 'Cobertura'
-    summaryFileLocation: '$(Agent.TempDirectory)/**/coverage.cobertura.xml'
+      - name: Run tests
+        run: dotnet test --no-build --verbosity normal
 
-- task: DotNetCoreCLI@2
-  displayName: 'Publish web app'
-  inputs:
-    command: 'publish'
-    projects: 'BankingApi/BankingApi.csproj'
-    arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
-    publishWebProjects: true
-    zipAfterPublish: true
+      - name: Publish
+        run: dotnet publish BankingApi/BankingApi.csproj -c Release -o ./publish
 
-- task: AzureCLI@2
-  displayName: 'Apply database migrations'
-  inputs:
-    azureSubscription: 'AzureConnection'
-    scriptType: 'bash'
-    scriptLocation: 'inlineScript'
-    inlineScript: |
-      dotnet tool install --global dotnet-ef
-      dotnet ef database update --project BankingApi
-    addSpnToEnvironment: true
-  env:
-    DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER: 0
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-- task: AzureWebApp@1
-  displayName: 'Deploy to Azure Web App'
-  inputs:
-    azureSubscription: 'AzureConnection'
-    appName: 'bigpurplebankifysy3weuhd6k'
-    package: '$(Build.ArtifactStagingDirectory)/**/*.zip'
-    deploymentMethod: 'auto'
-
-- task: AzureCLI@2
-  displayName: 'Run Smoke Test'
-  inputs:
-    azureSubscription: 'AzureConnection'
-    scriptType: 'bash'
-    scriptLocation: 'inlineScript'
-    inlineScript: |
-      # Fetch API key from app settings
-      API_KEY=$(az webapp config appsettings list --name bigpurplebankifysy3weuhd6k --resource-group BigPurpleBankRG --query "[?name=='ApiKey'].value" -o tsv)
-      
-      # Wait a bit for deployment to complete
-      sleep 15
-
-      # Make a test request to the API
-      HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "X-API-Key: $API_KEY" https://bigpurplebankifysy3weuhd6k.azurewebsites.net/banking/accounts)
-      
-      # Check if status is 200
-      if [ $HTTP_STATUS -eq 200 ]; then
-        echo "Smoke test passed!"
-        exit 0
-      else
-        echo "Smoke test failed with status code: $HTTP_STATUS"
-        exit 1
-      fi
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          slot-name: 'production'
+          package: './publish'
