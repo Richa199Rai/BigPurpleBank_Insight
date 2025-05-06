@@ -1,33 +1,91 @@
-# Big Purple Bank API
+BigPurpleBank - Cloud App Technical Assessment
 
-## Overview
-This project implements the Consumer Data Standards Banking API's Get Accounts endpoint for Big Purple Bank. It uses Azure PaaS, .NET 6, and a CI/CD pipeline with Azure DevOps.
+This project is a technical assessment for Insight, showcasing cloud application development and deployment using .NET, Azure, and Infrastructure as Code.
 
-## Architecture
-- **Backend**: .NET 6 API with Entity Framework Core, hosted on Azure App Service.
-- **Database**: Azure SQL Database, with connection string stored in Azure Key Vault.
-- **Security**: API key authentication, error handling middleware.
-- **Infrastructure**: Deployed via Bicep (IaC) for App Service, SQL Server, Key Vault.
-- **CI/CD**: Azure DevOps pipeline for build, test, and deployment.
-- **Tests**: Unit tests with xUnit, covering account retrieval scenarios.
+--------------------------------------------------
 
-## Setup
-1. Clone the repository.
-2. Restore dependencies: `dotnet restore`.
-3. Set up Azure resources using `main.bicep` (see `az deployment` command).
-4. Configure Azure DevOps pipeline with `azure-pipelines.yml`.
-5. Run locally: `dotnet run --project BankingApi`.
-6. Test endpoint: `curl -H "X-API-Key: <key>" https://<app-url>/banking/accounts`.
+Features Implemented
+- .NET 8 Web API for `/banking/accounts`
+- API Key Authentication via custom middleware
+- Azure SQL Database integration
+- Azure Key Vault for securely storing connection strings
+- CI/CD Pipeline using GitHub Actions
+- Infrastructure as Code using Bicep (partial deployment)
 
-## Deployment
-- Deploy infrastructure: `az deployment group create ...`.
-- Deploy app: Configured in Azure DevOps or manually via `az webapp deployment`.
-- Smoke test included in pipeline.
+--------------------------------------------------
 
-## Testing
-- Run tests: `dotnet test BankingApi.Tests`.
-- Tests cover account retrieval with multiple accounts, empty results, and various currencies.
+Local Development Setup
 
-## Notes
-- Uses managed identity for Key Vault access.
-- Follows Consumer Data Standards for API response format.
+Prerequisites
+- [.NET 8 SDK]
+- [SQL Server]
+
+Run Locally
+
+dotnet restore
+dotnet build
+dotnet run --project BankingApi/BankingApi.csproj
+
+
+Test API
+Use PowerShell or Postman:
+powershell
+Invoke-RestMethod -Uri "http://localhost:5282/banking/accounts" -Headers @{"X-API-Key" = "TestApiKey123"}
+
+> Update `appsettings.json` with your local SQL connection string.
+
+--------------------------------------------------
+
+API Security
+This API uses custom middleware to validate requests using an `X-API-Key` header. The key is read from configuration or Key Vault in production.
+
+--------------------------------------------------
+
+Azure Resources
+The project uses these Azure services:
+- Azure App Service (Linux)
+- Azure SQL Database
+- Azure Key Vault
+- Azure Resource Group: `bigpurplebank-rg`
+
+--------------------------------------------------
+
+Infrastructure as Code - Bicep
+File: `main.bicep`
+
+- Deploys App Service, SQL Server + DB, Key Vault
+- Adds connection string secret to Key Vault
+
+--------------------------------------------------
+
+CI/CD Pipeline
+File: `.github/workflows/deploy.yml`
+
+This GitHub Actions workflow:
+- Builds and tests the .NET app
+- Publishes it to Azure App Service
+- Uses a service principal (`AZURE_CREDENTIALS`) for authentication
+
+Azure Secret Setup
+Set the following secret in your GitHub repo:
+
+- `AZURE_CREDENTIALS`: JSON output from `az ad sp create-for-rbac --sdk-auth`
+
+--------------------------------------------------
+
+Project Structure
+
+BigPurpleBank/
+├── BankingApi/           # Main Web API project
+├── BankingApi.Tests/     # xUnit test project
+├── infra/main.bicep      # Azure infra as code
+└── .github/workflows/    # GitHub Actions CI/CD pipeline
+
+Notes
+- Swagger UI was intentionally disabled for this assessment.
+- Connection string is securely fetched from Key Vault when deployed to Azure.
+
+--------------------------------------------------
+
+Richa Rai  
+GitHub: [@Richa199Rai](https://github.com/Richa199Rai)

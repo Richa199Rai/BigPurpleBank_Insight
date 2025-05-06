@@ -16,7 +16,7 @@ namespace BankingApi.Tests
         .Options;
 
     var context = new BankingContext(options);
-    context.Database.EnsureDeleted();
+    context.Database.EnsureDeleted(); // Ensure clean state
     context.Database.EnsureCreated();
     return context;
 }
