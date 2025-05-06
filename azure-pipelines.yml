@@ -1,0 +1,96 @@
+trigger:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'Release'
+
+steps:
+- task: UseDotNet@2
+  displayName: 'Install .NET SDK'
+  inputs:
+    packageType: 'sdk'
+    version: '6.0.x'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Restore NuGet packages'
+  inputs:
+    command: 'restore'
+    projects: '**/*.csproj'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Build solution'
+  inputs:
+    command: 'build'
+    projects: '**/*.csproj'
+    arguments: '--configuration $(buildConfiguration)'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Run unit tests'
+  inputs:
+    command: 'test'
+    projects: 'BankingApi.Tests/BankingApi.Tests.csproj'
+    arguments: '--configuration $(buildConfiguration) --collect:"XPlat Code Coverage"'
+
+- task: PublishCodeCoverageResults@1
+  displayName: 'Publish code coverage report'
+  inputs:
+    codeCoverageTool: 'Cobertura'
+    summaryFileLocation: '$(Agent.TempDirectory)/**/coverage.cobertura.xml'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Publish web app'
+  inputs:
+    command: 'publish'
+    projects: 'BankingApi/BankingApi.csproj'
+    arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+    publishWebProjects: true
+    zipAfterPublish: true
+
+- task: AzureCLI@2
+  displayName: 'Apply database migrations'
+  inputs:
+    azureSubscription: 'AzureConnection'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      dotnet tool install --global dotnet-ef
+      dotnet ef database update --project BankingApi
+    addSpnToEnvironment: true
+  env:
+    DOTNET_SYSTEM_NET_HTTP_USESOCKETSHTTPHANDLER: 0
+
+- task: AzureWebApp@1
+  displayName: 'Deploy to Azure Web App'
+  inputs:
+    azureSubscription: 'AzureConnection'
+    appName: 'bigpurplebankifysy3weuhd6k'
+    package: '$(Build.ArtifactStagingDirectory)/**/*.zip'
+    deploymentMethod: 'auto'
+
+- task: AzureCLI@2
+  displayName: 'Run Smoke Test'
+  inputs:
+    azureSubscription: 'AzureConnection'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      # Fetch API key from app settings
+      API_KEY=$(az webapp config appsettings list --name bigpurplebankifysy3weuhd6k --resource-group BigPurpleBankRG --query "[?name=='ApiKey'].value" -o tsv)
+      
+      # Wait a bit for deployment to complete
+      sleep 15
+
+      # Make a test request to the API
+      HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "X-API-Key: $API_KEY" https://bigpurplebankifysy3weuhd6k.azurewebsites.net/banking/accounts)
+      
+      # Check if status is 200
+      if [ $HTTP_STATUS -eq 200 ]; then
+        echo "Smoke test passed!"
+        exit 0
+      else
+        echo "Smoke test failed with status code: $HTTP_STATUS"
+        exit 1
+      fi
