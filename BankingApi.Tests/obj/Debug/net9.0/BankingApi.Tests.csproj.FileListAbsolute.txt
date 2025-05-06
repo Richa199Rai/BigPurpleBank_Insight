@@ -1,7 +1,0 @@
-C:\Users\RICHA RAI\BigPurpleBank\BankingApi.Tests\bin\Debug\net9.0\.msCoverageSourceRootsMapping_BankingApi.Tests
-C:\Users\RICHA RAI\BigPurpleBank\BankingApi.Tests\bin\Debug\net9.0\CoverletSourceRootsMapping_BankingApi.Tests
-C:\Users\RICHA RAI\BigPurpleBank\BankingApi.Tests\obj\Debug\net9.0\BankingApi.Tests.csproj.AssemblyReference.cache
-C:\Users\RICHA RAI\BigPurpleBank\BankingApi.Tests\obj\Debug\net9.0\BankingApi.Tests.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\RICHA RAI\BigPurpleBank\BankingApi.Tests\obj\Debug\net9.0\BankingApi.Tests.AssemblyInfoInputs.cache
-C:\Users\RICHA RAI\BigPurpleBank\BankingApi.Tests\obj\Debug\net9.0\BankingApi.Tests.AssemblyInfo.cs
-C:\Users\RICHA RAI\BigPurpleBank\BankingApi.Tests\obj\Debug\net9.0\BankingApi.Tests.csproj.CoreCompileInputs.cache
