@@ -12,20 +12,26 @@ namespace BankingApi.Tests
 {
     public class ExtendedAccountsControllerTests
     {
-       
-       private BankingContext GetInMemoryContext(string databaseName)
-        {
-            var options = new DbContextOptionsBuilder<BankingContext>()
-                .UseInMemoryDatabase(databaseName)
-                .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
-                .Options;
 
-            var context = new BankingContext(options);
-            context.Database.EnsureDeleted();  
-            context.Database.EnsureCreated();
-            return context;
-        }
-       
+      private BankingContext GetInMemoryContext(string databaseName)
+{
+    var options = new DbContextOptionsBuilder<BankingContext>()
+        .UseInMemoryDatabase(databaseName)
+        .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
+        .Options;
+
+    var context = new BankingContext(options);
+    context.Database.EnsureDeleted();
+    context.Database.EnsureCreated();
+
+    // Clear preexisting accounts if any
+    context.Accounts.RemoveRange(context.Accounts);
+    context.SaveChanges();
+
+    return context;
+}
+ 
+      
        [Fact]
         public async Task GetAccounts_ReturnsOkResultWithAccounts()
         {
@@ -42,7 +48,7 @@ namespace BankingApi.Tests
             var okResult = Assert.IsType<OkObjectResult>(result);
             var response = Assert.IsType<AccountsResponse>(okResult.Value);
 
-            Assert.Equal(4, response.data.accounts.Count);
+            Assert.Equal(2, response.data.accounts.Count);
         }
 
         [Fact]
@@ -75,7 +81,7 @@ namespace BankingApi.Tests
             var okResult = Assert.IsType<OkObjectResult>(result);
             var response = Assert.IsType<AccountsResponse>(okResult.Value);
 
-            Assert.Equal(5, response.data.accounts.Count);
+            Assert.Equal(3, response.data.accounts.Count);
         }
     }
 }
