@@ -1,0 +1,12 @@
+[
+  {
+    "ContainingType": "BankingApi.Controllers.AccountsController",
+    "Method": "GetAccounts",
+    "RelativePath": "banking/accounts",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  }
+]

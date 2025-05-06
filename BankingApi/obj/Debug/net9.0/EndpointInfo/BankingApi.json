@@ -1,0 +1,23 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Big Purple Bank API",
+    "description": "API for Consumer Data Standards Banking",
+    "version": "v1"
+  },
+  "paths": {
+    "/banking/accounts": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    }
+  },
+  "components": { }
+}
